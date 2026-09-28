@@ -1,11 +1,14 @@
 
 # Tadpoles weekly photo sync
 Uploads your child's photos from Tadpoles to Google Photos every week via
-GitHub Actions.
+GitHub Actions. 
+
+If this saves you time, buy me a coffee ☕
 
 ![Test](https://github.com/ericjwagner/tadpoles/actions/workflows/test.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.12-blue.svg)
+[![Sponsor](https://img.shields.io/badge/sponsor-☕%20buy%20me%20a%20coffee-ff69b4?style=flat)](https://github.com/sponsors/ericjwagner)
 
 
 <img width="1280" height="640" alt="social-preview" src="https://github.com/user-attachments/assets/7183dc15-b417-4c5f-bf8b-16e3bdbe53e1" />
