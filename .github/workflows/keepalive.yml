@@ -1,0 +1,64 @@
+name: Keep scheduled sync alive
+
+# GitHub disables scheduled workflows in a public repository after 60 days
+# with no repository activity. Scheduled runs and secret updates do not reset
+# that clock. This workflow keeps "Weekly Tadpoles Photo Sync" from being
+# switched off silently. It never runs the sync and never touches secrets.
+#
+# Each run:
+#   1. Re-enables tadpole-weekly.yml and this workflow through the REST API
+#      (a no-op if they are already enabled; self-heals if one was disabled).
+#   2. If the default branch has had no commit for 40+ days, pushes one small
+#      commit that updates .github/keepalive, so the repository has real
+#      activity well before day 60. With commits from you, it does nothing.
+
+on:
+  schedule:
+    # Every Wednesday at 14:00 UTC, so a failure email arrives days before
+    # Sunday's sync.
+    - cron: "0 14 * * 3"
+  workflow_dispatch: {}
+
+permissions:
+  actions: write   # re-enable workflows
+  contents: write  # push the marker commit when needed
+
+concurrency:
+  group: keepalive
+  cancel-in-progress: false
+
+env:
+  QUIET_DAYS_LIMIT: "40"
+
+jobs:
+  keepalive:
+    runs-on: ubuntu-latest
+    steps:
+      # Scheduled runs always check out the default branch.
+      - uses: actions/checkout@v4
+
+      - name: Re-enable scheduled workflows
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for wf in tadpole-weekly.yml keepalive.yml; do
+            gh api --method PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/${wf}/enable"
+            echo "Enabled ${wf}"
+          done
+
+      - name: Commit a keepalive marker if the branch has been quiet
+        run: |
+          last=$(git log -1 --format=%ct)
+          now=$(date +%s)
+          days=$(( (now - last) / 86400 ))
+          echo "Last commit on the default branch was ${days} days ago."
+          if [ "${days}" -lt "${QUIET_DAYS_LIMIT}" ]; then
+            echo "Recent activity found. No commit needed."
+            exit 0
+          fi
+          date -u +"%Y-%m-%dT%H:%M:%SZ" > .github/keepalive
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/keepalive
+          git commit -m "chore: keepalive marker (no commits for ${days} days)"
+          git push

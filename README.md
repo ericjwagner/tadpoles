@@ -66,6 +66,12 @@ for a single-user tool.
 The workflow runs every Sunday at 13:00 UTC, or trigger it manually from the
 Actions tab ("Run workflow").
 
+GitHub disables scheduled workflows in public repos after 60 days without
+repository activity. `.github/workflows/keepalive.yml` runs every Wednesday:
+it re-enables the sync workflow through the API and, only if the default
+branch has had no commit for 40 days, pushes a one-line marker commit to
+`.github/keepalive`. It never runs the sync, so it is safe to trigger by hand.
+
 ## Multi-child photo filtering
 
 The Tadpoles app shows a confirmation prompt before downloading a photo that has
