@@ -46,22 +46,42 @@ Tadpoles' `member_display` field.
 
 ### Google Photos
 
-1. In [Google Cloud Console](https://console.cloud.google.com/), create a project,
-   enable the **Photos Library API**, and configure the OAuth consent screen as
-   **External** + **Testing**, adding your own Google account as a test user.
-2. Create an **OAuth client ID** of type **Desktop app**. Note the client ID and secret.
-3. Locally (not in CI): `pip install -r requirements-dev.txt`, then
-   `python get_google_token.py --client-id ... --client-secret ...`. It opens a
-   browser for you to approve access, then prints a refresh token.
-4. Add three more repo secrets: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
+Use a Google Cloud project in **Personal mode**. Google says Personal mode apps
+"are not subject to the OAuth user cap or 7-day test user token expiration",
+so the refresh token doesn't need weekly rotation. An existing External
+project can't be switched to Personal mode, so this needs a new project.
+
+1. Signed in with the Google account whose Photos library gets the uploads,
+   open the [Personal mode onboarding page](https://console.cloud.google.com/auth/overview/personal).
+   Create or pick a project, set **Application type** to **Desktop app**,
+   accept the terms, and click **Continue**. Copy the client ID and client
+   secret. Google shows the full secret only once.
+2. In the [API Library](https://console.cloud.google.com/apis/library) for
+   that project, make sure the **Photos Library API** is enabled.
+3. Get a refresh token with `get_google_token.py` (run it yourself, never in CI):
+   - **Computer:** `pip install requests`, then `python get_google_token.py`.
+     Enter the client ID and secret when asked. Approve access in the browser
+     tab it opens.
+   - **Phone:** on github.com, open this repo, tap **Code** → **Codespaces** →
+     **Create codespace on master**. In the codespace terminal run
+     `pip install requests && python get_google_token.py` (paste mode turns on
+     automatically). Tap the printed link and approve access. Google then
+     opens a `127.0.0.1` page that won't load. Copy that page's full address
+     and paste it into the terminal. Delete the codespace when you're done.
+4. Set three repo secrets: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
    `GOOGLE_REFRESH_TOKEN`.
 
-**Important:** because this is an unverified personal app, the refresh token
-expires after 7 days. When the weekly workflow starts failing with a Google
-auth error, re-run `get_google_token.py` locally and update the
-`GOOGLE_REFRESH_TOKEN` secret. Going through Google's app verification would
-remove this, but it's a multi-week review meant for public apps, not worth it
-for a single-user tool.
+Keep the old project until a sync with the new secrets works. If it fails,
+put the old three secrets back.
+
+<details>
+<summary>Older setup: External + Testing project (token expires every 7 days)</summary>
+
+With the OAuth consent screen set to **External** + **Testing**, Google
+expires the refresh token 7 days after consent. Re-run `get_google_token.py`
+and update `GOOGLE_REFRESH_TOKEN` every week.
+
+</details>
 
 The workflow runs every Sunday at 13:00 UTC, or trigger it manually from the
 Actions tab ("Run workflow").
@@ -105,7 +125,7 @@ python tadpole_sync.py
 
 ```
 pip install -r requirements-dev.txt
-pytest test_face_filter.py -v
+pytest -v
 ```
 
 ## Known limitations
@@ -113,8 +133,9 @@ pytest test_face_filter.py -v
 - Face detection can miss real faces at odd angles or in low light, which
   means the occasional solo photo gets skipped as if it had zero faces. See
   [Multi-child photo filtering](#multi-child-photo-filtering).
-- The Google refresh token expires every 7 days (unverified personal OAuth
-  app) — see the Google Photos setup section above.
+- With an External + Testing Google project, the refresh token expires every
+  7 days. A Personal mode project avoids this. See the Google Photos setup
+  section above.
 - Only matches on a single child name (`TADPOLES_CHILD_NAME`); doesn't
   support syncing photos for multiple kids in one run.
 - Depends on Tadpoles' undocumented API staying stable — see the disclaimer

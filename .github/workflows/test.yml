@@ -16,4 +16,4 @@ jobs:
 
       - run: pip install -r requirements-dev.txt
 
-      - run: pytest test_face_filter.py -v
+      - run: pytest -v
